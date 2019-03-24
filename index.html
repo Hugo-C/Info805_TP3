@@ -9,16 +9,51 @@
 
     <script src="three.js"></script>
     <script src="js/Detector.js"></script>
+
+    <script type="x-shader/x-vertex" id="vertexShader">
+        attribute float vertexDisplacement;
+        uniform float delta;
+        varying float vOpacity;
+        varying vec3 vUv;
+
+        void main(){
+            vUv = position;
+            vOpacity = vertexDisplacement;
+            vec3 p = position;
+
+            p.x += sin(vertexDisplacement) * 0.1;
+            p.y += cos(vertexDisplacement) * 0.1;
+
+            vec4 modelViewPosition = modelViewMatrix * vec4(p, 1.0);
+            gl_Position = projectionMatrix * modelViewPosition;
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        uniform float delta;
+        varying float vOpacity;
+        varying vec3 vUv;
+
+        void main(){
+            float r = 1.0 + abs(sin(vUv.x * delta) * cos(vUv.y * delta));
+            float g = r * 0.45;
+            float b = r * 0.2;
+            gl_FragColor = vec4(r, g, b, vOpacity);
+        }
+    </script>
+
     <script type="text/javascript">
 
         // Checks that your browser supports WebGL.
+
         if (!Detector.webgl) Detector.addGetWebGLMessage();
 
         let renderer = null;
         let scene = null;
         let camera = null;
-        let earth = null;
-        let sun = null;
+        let earthMesh = null;
+        let vertexDisplacement = null;
+        let sunMesh = null;
         let curTime = Date.now();
 
         // This function is called whenever the document is loaded
@@ -51,28 +86,44 @@
 
             // Now, create a Basic material; pass in the map
             let material = new THREE.MeshBasicMaterial({map: map});
-            let sunMaterial = new THREE.MeshPhongMaterial({color: 0xffea0a});
+
+            let uniforms = {
+                delta: {value: 0}
+            };
+            let sunMaterial = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: document.getElementById("vertexShader").textContent,
+                fragmentShader: document.getElementById("fragmentShader").textContent
+            });
 
             // Create the sphere geometry
             let geometry = new THREE.SphereGeometry(0.33, 32, 32);
-            let sunGeometry = new THREE.SphereGeometry(2, 32, 32);
+            let sunGeometry = new THREE.SphereBufferGeometry(2, 32, 32);
 
             // And put the geometry and material together into a mesh
-            earth = new THREE.Mesh(geometry, material);
-            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            earthMesh = new THREE.Mesh(geometry, material);
+            sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
 
             // Move the mesh back from the camera and tilt it toward the viewer
-            earth.position.z = -6;
-            earth.rotation.x = Math.PI / 5;
-            earth.rotation.y = Math.PI / 5;
+            earthMesh.position.z = -6;
+            earthMesh.position.x = 1;
+            earthMesh.rotation.x = Math.PI / 5;
+            earthMesh.rotation.y = Math.PI / 5;
 
-            sun.position.z = -12;
-            sun.rotation.x = Math.PI / 5;
-            sun.rotation.y = Math.PI / 5;
+            sunMesh.position.z = -25;
+            sunMesh.position.x = -5;
+            sunMesh.rotation.x = Math.PI / 5;
+            sunMesh.rotation.y = Math.PI / 5;
+
+            vertexDisplacement = new Float32Array(sunGeometry.attributes.position.count);
+            for(let i = 0; i < vertexDisplacement.length; i++){
+                vertexDisplacement[i] = Math.sin(i);
+            }
+            sunGeometry.addAttribute("vertexDisplacement", new THREE.BufferAttribute(vertexDisplacement, 1));
 
             // Finally, add the mesh to our scene
-            scene.add(earth);
-            scene.add(sun);
+            scene.add(earthMesh);
+            scene.add(sunMesh);
         }
 
         // This function is called regularly to update the canvas webgl.
@@ -90,6 +141,12 @@
         // This function is called regularly to take care of the rendering.
         function render() {
             // Render the scene
+            let time = Date.now();
+            sunMesh.material.uniforms.delta.value = Math.cos(time * 0.001);
+            for(let i = 0; i < vertexDisplacement.length; i++){
+                vertexDisplacement[i] = Math.sin(i * time * 0.0001);
+            }
+            sunMesh.geometry.attributes.vertexDisplacement.needsUpdate = true;
             renderer.render(scene, camera);
         }
 
@@ -103,7 +160,8 @@
             // Now we can move objects, camera, etc.
             // Example: rotation cube
             let angle = 0.1 * Math.PI * 2 * fracTime; // one turn per 10 second.
-            earth.rotation.y += angle;
+            earthMesh.rotation.y += angle;
+            sunMesh.rotation.y += angle;
         }
 
     </script>
