@@ -17,6 +17,14 @@ body {
     z-index:1000;
 }
 
+#webglcanvas {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
 a {
     color: #00ffff;
 }
