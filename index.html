@@ -14,16 +14,17 @@
         // Checks that your browser supports WebGL.
         if (!Detector.webgl) Detector.addGetWebGLMessage();
 
-        var renderer = null;
-        var scene = null;
-        var camera = null;
-        var cube = null;
-        var curTime = Date.now();
+        let renderer = null;
+        let scene = null;
+        let camera = null;
+        let earth = null;
+        let sun = null;
+        let curTime = Date.now();
 
         // This function is called whenever the document is loaded
         function init() {
             // Get display canvas
-            var canvas = document.getElementById("webglcanvas");
+            const canvas = document.getElementById("webglcanvas");
             console.log(canvas);
 
             // Create the Three.js renderer and attach it to our canvas
@@ -38,27 +39,40 @@
             // Add  a camera so we can view the scene
             camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 1, 4000);
 
+            // Add a white point light
+            let light = new THREE.PointLight( 0xffffff, 1.5);
+            light.position.x = 5;
+            scene.add( light );
+
             // Create a texture-mapped sphere and add it to the scene
             // First, create the texture map
-            var mapUrl = "images/earth_atmos_2048.jpg";
-            var map = new THREE.TextureLoader().load(mapUrl);
+            let mapUrl = "images/earth_atmos_2048.jpg";
+            let map = new THREE.TextureLoader().load(mapUrl);
 
             // Now, create a Basic material; pass in the map
-            var material = new THREE.MeshBasicMaterial({map: map});
+            let material = new THREE.MeshBasicMaterial({map: map});
+            let sunMaterial = new THREE.MeshPhongMaterial({color: 0xffea0a});
 
             // Create the sphere geometry
-            var geometry = new THREE.SphereGeometry(1, 32, 32);
+            let geometry = new THREE.SphereGeometry(0.33, 32, 32);
+            let sunGeometry = new THREE.SphereGeometry(2, 32, 32);
 
             // And put the geometry and material together into a mesh
-            cube = new THREE.Mesh(geometry, material);
+            earth = new THREE.Mesh(geometry, material);
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
 
             // Move the mesh back from the camera and tilt it toward the viewer
-            cube.position.z = -8;
-            cube.rotation.x = Math.PI / 5;
-            cube.rotation.y = Math.PI / 5;
+            earth.position.z = -6;
+            earth.rotation.x = Math.PI / 5;
+            earth.rotation.y = Math.PI / 5;
+
+            sun.position.z = -12;
+            sun.rotation.x = Math.PI / 5;
+            sun.rotation.y = Math.PI / 5;
 
             // Finally, add the mesh to our scene
-            scene.add(cube);
+            scene.add(earth);
+            scene.add(sun);
         }
 
         // This function is called regularly to update the canvas webgl.
@@ -82,14 +96,14 @@
         // This function is called regularly to update objects.
         function animate() {
             // Computes how time has changed since last display
-            var now = Date.now();
-            var deltaTime = now - curTime;
+            let now = Date.now();
+            let deltaTime = now - curTime;
             curTime = now;
-            var fracTime = deltaTime / 1000; // in seconds
+            let fracTime = deltaTime / 1000; // in seconds
             // Now we can move objects, camera, etc.
             // Example: rotation cube
-            var angle = 0.1 * Math.PI * 2 * fracTime; // one turn per 10 second.
-            cube.rotation.y += angle;
+            let angle = 0.1 * Math.PI * 2 * fracTime; // one turn per 10 second.
+            earth.rotation.y += angle;
         }
 
     </script>
