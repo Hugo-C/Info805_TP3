@@ -9,6 +9,7 @@
 
     <script src="three.js"></script>
     <script src="js/Detector.js"></script>
+    <script src="js/OrbitControls.js"></script>
 
     <script type="x-shader/x-vertex" id="vertexShader">
         attribute float vertexDisplacement;
@@ -55,6 +56,7 @@
         let vertexDisplacement = null;
         let sunMesh = null;
         let curTime = Date.now();
+        let controls = null;
 
         // This function is called whenever the document is loaded
         function init() {
@@ -124,6 +126,17 @@
             }
             sunGeometry.addAttribute("vertexDisplacement", new THREE.BufferAttribute(vertexDisplacement, 1));
 
+            // init controls
+            controls = new THREE.OrbitControls( camera, renderer.domElement );
+            controls.addEventListener( 'change', render ); // call this only in static scenes (i.e., if there is no animation loop)
+            controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+            controls.dampingFactor = 0.25;
+            controls.screenSpacePanning = false;
+            controls.minDistance = earthMesh.geometry.parameters.radius + 1;
+            controls.maxDistance = 20;
+            controls.autoRotate = true;
+            controls.target = earthMesh.position;
+
             // Finally, add the mesh to our scene
             scene.add(earthMesh);
             scene.add(sunMesh);
@@ -154,7 +167,6 @@
             renderer.render(scene, camera);
         }
 
-        let cameraAngle = 1;
         // This function is called regularly to update objects.
         function animate() {
             // Computes how time has changed since last display
@@ -168,12 +180,7 @@
             earthMesh.rotation.y += angle;
             sunMesh.rotation.y += angle;
 
-            // update the camera
-            // Avec un grand demi-axe de 5 et un petit demi-axe de 3
-            cameraAngle += 0.05;
-            camera.position.x = 5 * Math.cos( cameraAngle );
-            camera.position.y = 3 * Math.sin( cameraAngle );
-            camera.lookAt( earthMesh.matrixWorld.getPosition() );
+            controls.update();
         }
 
     </script>
