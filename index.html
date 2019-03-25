@@ -246,8 +246,10 @@
             moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
             moonMesh.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
 
-            controls.target = earthMesh.matrixWorld.getPosition();
 
+            let earthPosition = new THREE.Vector3();
+            earthPosition.setFromMatrixPosition(earthMesh.matrixWorld);
+            controls.target = earthPosition;
             controls.update();
         }
     </script>
