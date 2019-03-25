@@ -296,9 +296,15 @@
             moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
             moonMesh.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
 
-            controls.target = earthMesh.matrixWorld.getPosition();
 
+            let earthPosition = new THREE.Vector3();
+            earthPosition.setFromMatrixPosition(earthMesh.matrixWorld);
+            controls.target = earthPosition;
             controls.update();
+        }
+
+        function toggleCameraAutoRotation() {
+            controls.autoRotate = ! controls.autoRotate;
         }
     </script>
 </head>
@@ -306,6 +312,7 @@
 <body>
     <div id="info"> a first three.js example</div>
     <canvas id="webglcanvas" style="border: none;background-color:#000000" width="800" height="600"></canvas>
+    <button onclick="toggleCameraAutoRotation()">toggle camera auto rotation</button>
     <!-- We run the WebGL code at the end to be sure that the document is loaded.
   -->
     <script>
