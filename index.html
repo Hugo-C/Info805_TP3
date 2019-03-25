@@ -10,6 +10,7 @@
 
     <script src="three.js"></script>
     <script src="js/Detector.js"></script>
+    <script src="js/OrbitControls.js"></script>
 
     <script type="x-shader/x-vertex" id="vertexShader">
         attribute float vertexDisplacement; uniform float delta; varying float vOpacity; varying vec3 vUv; void main(){ vUv = position; vOpacity = vertexDisplacement; vec3 p = position; p.x += sin(vertexDisplacement) * 0.1; p.y += cos(vertexDisplacement) * 0.1;
@@ -35,6 +36,7 @@
         let curTime = Date.now();
         let earthGroup = null;
         let moonGroup = null;
+        let controls = null;
 
         // This function is called whenever the document is loaded
         function init() {
@@ -128,6 +130,16 @@
 
             earthGroup.position.set(sunMesh.position.x, sunMesh.position.y, sunMesh.position.z);
             moonGroup.position.set(earthMesh.position.x, earthMesh.position.y, earthMesh.position.z);
+            // init controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.addEventListener('change', render); // call this only in static scenes (i.e., if there is no animation loop)
+            controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+            controls.dampingFactor = 0.25;
+            controls.screenSpacePanning = false;
+            controls.minDistance = earthMesh.geometry.parameters.radius + 1;
+            controls.maxDistance = 20;
+            controls.autoRotate = true;
+            controls.target = earthMesh.position;
 
             // Finally, add the mesh to our scene
             scene.add(sunMesh);
@@ -173,6 +185,8 @@
             earthMesh.rotation.y += angle; // et en un jour sur elle-même
             moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
             moonMesh.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
+
+            controls.update();
         }
     </script>
 </head>
