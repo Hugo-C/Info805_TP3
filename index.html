@@ -139,7 +139,7 @@
             controls.minDistance = earthMesh.geometry.parameters.radius + 1;
             controls.maxDistance = 20;
             controls.autoRotate = true;
-            controls.target = earthMesh.position;
+            controls.target = earthMesh.matrixWorld.getPosition();
 
             // Finally, add the mesh to our scene
             scene.add(sunMesh);
@@ -179,12 +179,14 @@
             curTime = now;
             let fracTime = deltaTime / 1000; // in seconds
 
-            let angle = fracTime * Math.PI * 2 * 10;
+            let angle = fracTime * Math.PI * 2;
             // Notez que l'axe y est l'axe "vertical" usuellement.
             earthGroup.rotation.y += angle / 365; // la terre tourne en 365 jours
             earthMesh.rotation.y += angle; // et en un jour sur elle-même
             moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
             moonMesh.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
+
+            controls.target = earthMesh.matrixWorld.getPosition();
 
             controls.update();
         }
