@@ -40,13 +40,13 @@
         let light = null;
         let earthMesh = null;
         let moonMesh = null;
-        let planetMesh = null;
         let vertexDisplacement = null;
         let sunMesh = null;
         let curTime = Date.now();
         let earthGroup = null;
         let moonGroup = null;
         let controls = null;
+        let planets = [];
 
         // This function is called whenever the document is loaded
         function init() {
@@ -117,21 +117,17 @@
             let earthGeometry = new THREE.SphereGeometry(1, 32, 32);
             let sunGeometry = new THREE.SphereBufferGeometry(2, 32, 32);
             let moonGeometry = new THREE.SphereGeometry(0.3, 32, 32);
-            let planetGeometry = new THREE.SphereGeometry(2.5, 32, 32);
 
             // And put the geometry and material together into a mesh
             earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
             sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
             moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
-            planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
 
             // specify shadow
             earthMesh.castShadow = true;
             earthMesh.receiveShadow = true;
             moonMesh.castShadow = true;
             moonMesh.receiveShadow = true;
-            planetMesh.castShadow = true;
-            planetMesh.receiveShadow = true;
 
             // Move the mesh back from the camera and tilt it toward the viewer
             earthMesh.position.z = -8;
@@ -144,10 +140,17 @@
             moonMesh.rotation.x = Math.PI / 5;
             moonMesh.rotation.y = Math.PI / 5;
 
-            planetMesh.position.z = -2;
-            planetMesh.position.x = 0;
-            planetMesh.rotation.x = Math.PI / 5;
-            planetMesh.rotation.y = Math.PI / 5;
+            for (let i = 0; i < 6; i++) {
+                let planetGeometry = new THREE.SphereGeometry(Math.random() + 2, 32, 32);
+                let planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
+                planetMesh.position.z = -2 - i * 5;
+                planetMesh.position.x = -4 + i * 10;
+                planetMesh.rotation.x = Math.PI / 5;
+                planetMesh.rotation.y = Math.PI / 5;
+                planetMesh.castShadow = true;
+                planetMesh.receiveShadow = true;
+                planets.push(planetMesh);
+            }
 
             sunMesh.position.z = -25;
             sunMesh.position.x = 0;
@@ -202,7 +205,9 @@
             scene.add(sunMesh);
             scene.add(light);
             scene.add(earthGroup);
-            scene.add(planetMesh);
+            for (let p of planets) {
+                scene.add(p);
+            }
         }
 
         function ExplodeAnimation(x, y) {
@@ -304,7 +309,16 @@
         }
 
         function toggleCameraAutoRotation() {
-            controls.autoRotate = ! controls.autoRotate;
+            controls.autoRotate = !controls.autoRotate;
+        }
+
+        function explosion() {
+
+            if (planets.length != 0) {
+                parts.push(new ExplodeAnimation(Math.random() * planets[planets.length - 1].position.x, Math.random() * planets[planets.length - 1].position.y));
+                scene.remove(planets[planets.length - 1]);
+                planets.pop();
+            }
         }
     </script>
 </head>
@@ -313,6 +327,7 @@
     <div id="info"> a first three.js example</div>
     <canvas id="webglcanvas" style="border: none;background-color:#000000" width="800" height="600"></canvas>
     <button onclick="toggleCameraAutoRotation()">toggle camera auto rotation</button>
+    <button onclick="explosion()">Explosion</button>
     <!-- We run the WebGL code at the end to be sure that the document is loaded.
   -->
     <script>
