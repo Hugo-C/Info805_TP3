@@ -76,8 +76,6 @@
 
             // Add a white point light
             let light = new THREE.PointLight( 0xffffff, 1.5);
-            light.position.x = 5;
-            scene.add( light );
 
             // Create a texture-mapped sphere and add it to the scene
             // First, create the texture map
@@ -85,7 +83,7 @@
             let map = new THREE.TextureLoader().load(mapUrl);
 
             // Now, create a Basic material; pass in the map
-            let material = new THREE.MeshBasicMaterial({map: map});
+            let material = new THREE.MeshStandardMaterial({map: map});
 
             let uniforms = {
                 delta: {value: 0}
@@ -97,7 +95,7 @@
             });
 
             // Create the sphere geometry
-            let geometry = new THREE.SphereGeometry(0.33, 32, 32);
+            let geometry = new THREE.SphereGeometry(1, 32, 32);
             let sunGeometry = new THREE.SphereBufferGeometry(2, 32, 32);
 
             // And put the geometry and material together into a mesh
@@ -105,7 +103,7 @@
             sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
 
             // Move the mesh back from the camera and tilt it toward the viewer
-            earthMesh.position.z = -6;
+            earthMesh.position.z = -25;
             earthMesh.position.x = 1;
             earthMesh.rotation.x = Math.PI / 5;
             earthMesh.rotation.y = Math.PI / 5;
@@ -114,6 +112,11 @@
             sunMesh.position.x = -5;
             sunMesh.rotation.x = Math.PI / 5;
             sunMesh.rotation.y = Math.PI / 5;
+
+            // place the light on the sun
+            light.position.x = sunMesh.position.x;
+            light.position.y = sunMesh.position.y;
+            light.position.z = sunMesh.position.z;
 
             vertexDisplacement = new Float32Array(sunGeometry.attributes.position.count);
             for(let i = 0; i < vertexDisplacement.length; i++){
@@ -124,6 +127,7 @@
             // Finally, add the mesh to our scene
             scene.add(earthMesh);
             scene.add(sunMesh);
+            scene.add( light );
         }
 
         // This function is called regularly to update the canvas webgl.
