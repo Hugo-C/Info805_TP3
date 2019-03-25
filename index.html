@@ -141,6 +141,18 @@
             controls.autoRotate = true;
             controls.target = earthMesh.matrixWorld.getPosition();
 
+            // Add background
+            var path = "images/Space/";
+            var format = '.jpg';
+            var urls = [
+                path + 'posx' + format, path + 'negx' + format,
+                path + 'posy' + format, path + 'negy' + format,
+                path + 'posz' + format, path + 'negz' + format
+            ];
+            var textureCube = new THREE.CubeTextureLoader().load(urls);
+            textureCube.format = THREE.RGBFormat;
+            scene.background = textureCube;
+
             // Finally, add the mesh to our scene
             scene.add(sunMesh);
             scene.add(light);
