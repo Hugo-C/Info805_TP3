@@ -154,6 +154,7 @@
             renderer.render(scene, camera);
         }
 
+        let cameraAngle = 1;
         // This function is called regularly to update objects.
         function animate() {
             // Computes how time has changed since last display
@@ -166,6 +167,13 @@
             let angle = 0.1 * Math.PI * 2 * fracTime; // one turn per 10 second.
             earthMesh.rotation.y += angle;
             sunMesh.rotation.y += angle;
+
+            // update the camera
+            // Avec un grand demi-axe de 5 et un petit demi-axe de 3
+            cameraAngle += 0.05;
+            camera.position.x = 5 * Math.cos( cameraAngle );
+            camera.position.y = 3 * Math.sin( cameraAngle );
+            camera.lookAt( earthMesh.matrixWorld.getPosition() );
         }
 
     </script>
