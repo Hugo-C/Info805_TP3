@@ -52,6 +52,7 @@
         let renderer = null;
         let scene = null;
         let camera = null;
+        let light = null;
         let earthMesh = null;
         let moonMesh = null;
         let vertexDisplacement = null;
@@ -79,8 +80,20 @@
             // Add  a camera so we can view the scene
             camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 1, 4000);
 
+            renderer.shadowMap.enabled = true;
+            // rendu coûteux mais plus joli (default: THREE.PCFShadowMap)
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
             // Add a white point light
-            let light = new THREE.PointLight(0xffffff, 1.5);
+            light = new THREE.PointLight(0xffffff, 1.5);
+
+            light.castShadow = true;
+            // On peut aussi paramétrer la qualité du calcul
+            light.shadow.mapSize.width = 1024;
+            light.shadow.mapSize.height = 1024;
+            light.shadow.camera.near = 0.5;    // default
+            light.shadow.camera.far = 50;
+            light.shadow.camera.fov = 120;
 
             // Create a texture-mapped sphere and add it to the scene
             // First, create the texture map
@@ -117,6 +130,12 @@
             earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
             sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
             moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+
+            // specify shadow
+            earthMesh.castShadow = true;
+            earthMesh.receiveShadow = true;
+            moonMesh.castShadow = true;
+            moonMesh.receiveShadow = true;
 
             // Move the mesh back from the camera and tilt it toward the viewer
             earthMesh.position.z = -8;
@@ -161,19 +180,20 @@
             controls.dampingFactor = 0.25;
             controls.screenSpacePanning = false;
             controls.minDistance = earthMesh.geometry.parameters.radius + 1;
-            controls.maxDistance = 20;
             controls.autoRotate = true;
+            controls.maxDistance = 50;
+            controls.distance = (controls.minDistance + controls.maxDistance) / 2;
             controls.target = earthMesh.matrixWorld.getPosition();
 
             // Add background
-            var path = "images/Space/";
-            var format = '.jpg';
-            var urls = [
+            let path = "images/Space/";
+            let format = '.jpg';
+            let urls = [
                 path + 'posx' + format, path + 'negx' + format,
                 path + 'posy' + format, path + 'negy' + format,
                 path + 'posz' + format, path + 'negz' + format
             ];
-            var textureCube = new THREE.CubeTextureLoader().load(urls);
+            let textureCube = new THREE.CubeTextureLoader().load(urls);
             textureCube.format = THREE.RGBFormat;
             scene.background = textureCube;
 
@@ -181,6 +201,10 @@
             scene.add(sunMesh);
             scene.add(light);
             scene.add(earthGroup);
+
+            //Create a helper for the shadow camera (optional)
+            let helper = new THREE.CameraHelper( light.shadow.camera );
+            scene.add( helper );
         }
 
         // This function is called regularly to update the canvas webgl.
