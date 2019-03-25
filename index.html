@@ -13,12 +13,35 @@
     <script src="js/OrbitControls.js"></script>
 
     <script type="x-shader/x-vertex" id="vertexShader">
-        attribute float vertexDisplacement; uniform float delta; varying float vOpacity; varying vec3 vUv; void main(){ vUv = position; vOpacity = vertexDisplacement; vec3 p = position; p.x += sin(vertexDisplacement) * 0.1; p.y += cos(vertexDisplacement) * 0.1;
-        vec4 modelViewPosition = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * modelViewPosition; }
+        attribute float vertexDisplacement;
+        uniform float delta;
+        varying float vOpacity;
+        varying vec3 vUv;
+
+        void main(){
+            vUv = position;
+            vOpacity = vertexDisplacement;
+            vec3 p = position;
+
+            p.x += sin(vertexDisplacement) * 0.1;
+            p.y += cos(vertexDisplacement) * 0.1;
+
+            vec4 modelViewPosition = modelViewMatrix * vec4(p, 1.0);
+            gl_Position = projectionMatrix * modelViewPosition;
+        }
     </script>
 
     <script type="x-shader/x-fragment" id="fragmentShader">
-        uniform float delta; varying float vOpacity; varying vec3 vUv; void main(){ float r = 1.0 + abs(sin(vUv.x * delta) * cos(vUv.y * delta)); float g = r * 0.45; float b = r * 0.2; gl_FragColor = vec4(r, g, b, vOpacity); }
+        uniform float delta;
+        varying float vOpacity;
+        varying vec3 vUv;
+
+        void main(){
+            float r = 1.0 + abs(sin(vUv.x * delta) * cos(vUv.y * delta));
+            float g = r * 0.45;
+            float b = r * 0.2;
+            gl_FragColor = vec4(r, g, b, vOpacity);
+        }
     </script>
 
     <script type="text/javascript">
@@ -64,19 +87,20 @@
             let mapUrl = "images/earth_atmos_2048.jpg";
             let earthMap = new THREE.TextureLoader().load(mapUrl);
             let moonMap = new THREE.TextureLoader().load("images/moon_1024.jpg");
+            let normalMapUrl = "images/earth_normal_2048.jpg";
+            let normalMap = new THREE.TextureLoader().load(normalMapUrl);
 
             // Now, create a Basic material; pass in the map
             let earthMaterial = new THREE.MeshStandardMaterial({
-                map: earthMap
+                map: earthMap,
+                normalMap: normalMap
             });
             let moonMaterial = new THREE.MeshStandardMaterial({
                 map: moonMap
             });
 
             let uniforms = {
-                delta: {
-                    value: 0
-                }
+                delta: {value: 0}
             };
             let sunMaterial = new THREE.ShaderMaterial({
                 uniforms: uniforms,
@@ -164,7 +188,7 @@
             // Render the scene
             let time = Date.now();
             sunMesh.material.uniforms.delta.value = Math.cos(time * 0.001);
-            for (let i = 0; i < vertexDisplacement.length; i++) {
+            for(let i = 0; i < vertexDisplacement.length; i++){
                 vertexDisplacement[i] = Math.sin(i * time * 0.0001);
             }
             sunMesh.geometry.attributes.vertexDisplacement.needsUpdate = true;
