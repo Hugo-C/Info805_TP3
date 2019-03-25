@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>A small introduction to three.js webgl</title>
     <meta charset="utf-8">
@@ -11,39 +12,15 @@
     <script src="js/Detector.js"></script>
 
     <script type="x-shader/x-vertex" id="vertexShader">
-        attribute float vertexDisplacement;
-        uniform float delta;
-        varying float vOpacity;
-        varying vec3 vUv;
-
-        void main(){
-            vUv = position;
-            vOpacity = vertexDisplacement;
-            vec3 p = position;
-
-            p.x += sin(vertexDisplacement) * 0.1;
-            p.y += cos(vertexDisplacement) * 0.1;
-
-            vec4 modelViewPosition = modelViewMatrix * vec4(p, 1.0);
-            gl_Position = projectionMatrix * modelViewPosition;
-        }
+        attribute float vertexDisplacement; uniform float delta; varying float vOpacity; varying vec3 vUv; void main(){ vUv = position; vOpacity = vertexDisplacement; vec3 p = position; p.x += sin(vertexDisplacement) * 0.1; p.y += cos(vertexDisplacement) * 0.1;
+        vec4 modelViewPosition = modelViewMatrix * vec4(p, 1.0); gl_Position = projectionMatrix * modelViewPosition; }
     </script>
 
     <script type="x-shader/x-fragment" id="fragmentShader">
-        uniform float delta;
-        varying float vOpacity;
-        varying vec3 vUv;
-
-        void main(){
-            float r = 1.0 + abs(sin(vUv.x * delta) * cos(vUv.y * delta));
-            float g = r * 0.45;
-            float b = r * 0.2;
-            gl_FragColor = vec4(r, g, b, vOpacity);
-        }
+        uniform float delta; varying float vOpacity; varying vec3 vUv; void main(){ float r = 1.0 + abs(sin(vUv.x * delta) * cos(vUv.y * delta)); float g = r * 0.45; float b = r * 0.2; gl_FragColor = vec4(r, g, b, vOpacity); }
     </script>
 
     <script type="text/javascript">
-
         // Checks that your browser supports WebGL.
 
         if (!Detector.webgl) Detector.addGetWebGLMessage();
@@ -52,9 +29,12 @@
         let scene = null;
         let camera = null;
         let earthMesh = null;
+        let moonMesh = null;
         let vertexDisplacement = null;
         let sunMesh = null;
         let curTime = Date.now();
+        let earthGroup = null;
+        let moonGroup = null;
 
         // This function is called whenever the document is loaded
         function init() {
@@ -75,18 +55,26 @@
             camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 1, 4000);
 
             // Add a white point light
-            let light = new THREE.PointLight( 0xffffff, 1.5);
+            let light = new THREE.PointLight(0xffffff, 1.5);
 
             // Create a texture-mapped sphere and add it to the scene
             // First, create the texture map
             let mapUrl = "images/earth_atmos_2048.jpg";
-            let map = new THREE.TextureLoader().load(mapUrl);
+            let earthMap = new THREE.TextureLoader().load(mapUrl);
+            let moonMap = new THREE.TextureLoader().load("images/moon_1024.jpg");
 
             // Now, create a Basic material; pass in the map
-            let material = new THREE.MeshStandardMaterial({map: map});
+            let earthMaterial = new THREE.MeshStandardMaterial({
+                map: earthMap
+            });
+            let moonMaterial = new THREE.MeshStandardMaterial({
+                map: moonMap
+            });
 
             let uniforms = {
-                delta: {value: 0}
+                delta: {
+                    value: 0
+                }
             };
             let sunMaterial = new THREE.ShaderMaterial({
                 uniforms: uniforms,
@@ -95,21 +83,28 @@
             });
 
             // Create the sphere geometry
-            let geometry = new THREE.SphereGeometry(1, 32, 32);
+            let earthGeometry = new THREE.SphereGeometry(1, 32, 32);
             let sunGeometry = new THREE.SphereBufferGeometry(2, 32, 32);
+            let moonGeometry = new THREE.SphereGeometry(0.3, 32, 32);
 
             // And put the geometry and material together into a mesh
-            earthMesh = new THREE.Mesh(geometry, material);
+            earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
             sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
+            moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
 
             // Move the mesh back from the camera and tilt it toward the viewer
-            earthMesh.position.z = -25;
-            earthMesh.position.x = 1;
+            earthMesh.position.z = -8;
+            earthMesh.position.x = -2;
             earthMesh.rotation.x = Math.PI / 5;
             earthMesh.rotation.y = Math.PI / 5;
 
+            moonMesh.position.z = -3;
+            moonMesh.position.x = 0;
+            moonMesh.rotation.x = Math.PI / 5;
+            moonMesh.rotation.y = Math.PI / 5;
+
             sunMesh.position.z = -25;
-            sunMesh.position.x = -5;
+            sunMesh.position.x = 0;
             sunMesh.rotation.x = Math.PI / 5;
             sunMesh.rotation.y = Math.PI / 5;
 
@@ -119,15 +114,25 @@
             light.position.z = sunMesh.position.z;
 
             vertexDisplacement = new Float32Array(sunGeometry.attributes.position.count);
-            for(let i = 0; i < vertexDisplacement.length; i++){
+            for (let i = 0; i < vertexDisplacement.length; i++) {
                 vertexDisplacement[i] = Math.sin(i);
             }
             sunGeometry.addAttribute("vertexDisplacement", new THREE.BufferAttribute(vertexDisplacement, 1));
 
+            // Groups
+            moonGroup = new THREE.Group();
+            moonGroup.add(moonMesh);
+            earthGroup = new THREE.Group();
+            earthGroup.add(earthMesh);
+            earthGroup.add(moonGroup);
+
+            earthGroup.position.set(sunMesh.position.x, sunMesh.position.y, sunMesh.position.z);
+            moonGroup.position.set(earthMesh.position.x, earthMesh.position.y, earthMesh.position.z);
+
             // Finally, add the mesh to our scene
-            scene.add(earthMesh);
             scene.add(sunMesh);
-            scene.add( light );
+            scene.add(light);
+            scene.add(earthGroup);
         }
 
         // This function is called regularly to update the canvas webgl.
@@ -147,7 +152,7 @@
             // Render the scene
             let time = Date.now();
             sunMesh.material.uniforms.delta.value = Math.cos(time * 0.001);
-            for(let i = 0; i < vertexDisplacement.length; i++){
+            for (let i = 0; i < vertexDisplacement.length; i++) {
                 vertexDisplacement[i] = Math.sin(i * time * 0.0001);
             }
             sunMesh.geometry.attributes.vertexDisplacement.needsUpdate = true;
@@ -161,25 +166,26 @@
             let deltaTime = now - curTime;
             curTime = now;
             let fracTime = deltaTime / 1000; // in seconds
-            // Now we can move objects, camera, etc.
-            // Example: rotation cube
-            let angle = 0.1 * Math.PI * 2 * fracTime; // one turn per 10 second.
-            earthMesh.rotation.y += angle;
-            sunMesh.rotation.y += angle;
-        }
 
+            let angle = fracTime * Math.PI * 2 * 10;
+            // Notez que l'axe y est l'axe "vertical" usuellement.
+            earthGroup.rotation.y += angle / 365; // la terre tourne en 365 jours
+            earthMesh.rotation.y += angle; // et en un jour sur elle-même
+            moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
+            moonMesh.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
+        }
     </script>
 </head>
-<body>
-<div id="info"> a first three.js example</div>
-<canvas id="webglcanvas" style="border: none;background-color:#000000"
-        width="600" height="500"></canvas>
-<!-- We run the WebGL code at the end to be sure that the document is loaded.
-  -->
-<script>
-    init();
-    run();
-</script>
-</body>
-</html>
 
+<body>
+    <div id="info"> a first three.js example</div>
+    <canvas id="webglcanvas" style="border: none;background-color:#000000" width="800" height="600"></canvas>
+    <!-- We run the WebGL code at the end to be sure that the document is loaded.
+  -->
+    <script>
+        init();
+        run();
+    </script>
+</body>
+
+</html>
