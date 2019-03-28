@@ -46,6 +46,7 @@
         let earthGroup = null;
         let moonGroup = null;
         let controls = null;
+        let rotateCamera = true;
         let planets = [];
         let numBackground = 1;
 
@@ -214,7 +215,7 @@
             controls.dampingFactor = 0.25;
             controls.screenSpacePanning = false;
             controls.minDistance = earthMesh.geometry.parameters.radius + 1;
-            controls.autoRotate = true;
+            controls.autoRotate = rotateCamera;
             controls.maxDistance = 50;
             controls.distance = (controls.minDistance + controls.maxDistance) / 2;
             controls.target = earthMesh.matrixWorld.getPosition();
@@ -344,7 +345,8 @@
         }
 
         function toggleCameraAutoRotation() {
-            controls.autoRotate = !controls.autoRotate;
+            rotateCamera = !rotateCamera;
+            controls.autoRotate = rotateCamera;
         }
 
         function changeBackground() {
