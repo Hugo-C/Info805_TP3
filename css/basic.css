@@ -39,7 +39,7 @@ body {
 #progressBar {
     width: 200px;
     height: 20px;
-    background: red;
+    background: #353dff;
     border: none;
 }
 
