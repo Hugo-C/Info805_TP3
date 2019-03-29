@@ -25,15 +25,11 @@
 
     <script src="js/WebGL.js"></script>
 
-    <script id="fragmentShader" type="x-shader/x-fragment">
+    <script id="fragment_shader" type="x-shader/x-fragment">
 
 			uniform float time;
 
-			uniform float fogDensity;
-			uniform vec3 fogColor;
-
-			uniform sampler2D texture1;
-			uniform sampler2D texture2;
+			uniform sampler2D texture;
 
 			varying vec2 vUv;
 
@@ -41,49 +37,31 @@
 
 				vec2 position = - 1.0 + 2.0 * vUv;
 
-				vec4 noise = texture2D( texture1, vUv );
-				vec2 T1 = vUv + vec2( 1.5, - 1.5 ) * time * 0.02;
-				vec2 T2 = vUv + vec2( - 0.5, 2.0 ) * time * 0.01;
+				float a = atan( position.y, position.x );
+				float r = sqrt( dot( position, position ) );
 
-				T1.x += noise.x * 2.0;
-				T1.y += noise.y * 2.0;
-				T2.x -= noise.y * 0.2;
-				T2.y += noise.z * 0.2;
+				vec2 uv;
+				uv.x = cos( a ) / r;
+				uv.y = sin( a ) / r;
+				uv /= 10.0;
+				uv += time * 0.05;
 
-				float p = texture2D( texture1, T1 * 2.0 ).a;
+				vec3 color = texture2D( texture, uv ).rgb;
 
-				vec4 color = texture2D( texture2, T2 * 2.0 );
-				vec4 temp = color * ( vec4( p, p, p, p ) * 2.0 ) + ( color * color - 0.1 );
-
-				if( temp.r > 1.0 ) { temp.bg += clamp( temp.r - 2.0, 0.0, 100.0 ); }
-				if( temp.g > 1.0 ) { temp.rb += temp.g - 1.0; }
-				if( temp.b > 1.0 ) { temp.rg += temp.b - 1.0; }
-
-				gl_FragColor = temp;
-
-				float depth = gl_FragCoord.z / gl_FragCoord.w;
-				const float LOG2 = 1.442695;
-				float fogFactor = exp2( - fogDensity * fogDensity * depth * depth * LOG2 );
-				fogFactor = 1.0 - clamp( fogFactor, 0.0, 1.0 );
-
-				gl_FragColor = mix( gl_FragColor, vec4( fogColor, gl_FragColor.w ), fogFactor );
+				gl_FragColor = vec4( color * r * 1.5, 1.0 );
 
 			}
-
 		</script>
 
 		<script id="vertexShader" type="x-shader/x-vertex">
 
-			uniform vec2 uvScale;
 			varying vec2 vUv;
 
 			void main()
 			{
-
-				vUv = uvScale * uv;
+				vUv = uv;
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 				gl_Position = projectionMatrix * mvPosition;
-
 			}
 
 		</script>
@@ -113,16 +91,12 @@
             const canvas = document.getElementById("webglcanvas");
             console.log(canvas);
 
-            renderer = new THREE.WebGLRenderer( { antialias: true, canvas: canvas} );
-            renderer.setPixelRatio( window.devicePixelRatio );
-            renderer.autoClear = false;
-
             // Create the Three.js renderer and attach it to our canvas
-            // renderer = new THREE.WebGLRenderer({
-            //     canvas: canvas,
-            //     antialias: true,
-            //     autoClear: false
-            // });
+            renderer = new THREE.WebGLRenderer({
+                canvas: canvas,
+                antialias: true,
+                autoClear: false
+            });
             // Set the viewport size
             renderer.setSize(canvas.width, canvas.height);
             // Create a new Three.js scene
@@ -162,28 +136,18 @@
                 map: moonMap
             });
 
-            var textureLoader = new THREE.TextureLoader();
-
             uniforms = {
-
-                "fogDensity": { value: 0.45 },
-                "fogColor": { value: new THREE.Vector3( 0, 0, 0 ) },
                 "time": { value: 1.0 },
-                "uvScale": { value: new THREE.Vector2( 3.0, 1.0 ) },
-                "texture1": { value: textureLoader.load( 'textures/lava/cloud.png' ) },
-                "texture2": { value: textureLoader.load( 'textures/lava/lavatile.jpg' ) }
-
+                "texture": { value: new THREE.TextureLoader().load( 'textures/8k_sun.jpg' ) }
             };
 
-            uniforms[ "texture1" ].value.wrapS = uniforms[ "texture1" ].value.wrapT = THREE.RepeatWrapping;
-            uniforms[ "texture2" ].value.wrapS = uniforms[ "texture2" ].value.wrapT = THREE.RepeatWrapping;
+            uniforms[ "texture" ].value.wrapS = uniforms[ "texture" ].value.wrapT = THREE.RepeatWrapping;
 
 
             let sunMaterial = new THREE.ShaderMaterial( {
                 uniforms: uniforms,
                 vertexShader: document.getElementById( 'vertexShader' ).textContent,
-                fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-
+                fragmentShader: document.getElementById( 'fragment_shader' ).textContent
             } );
 
             // Create the sphere geometry
@@ -266,16 +230,6 @@
             scene.add(sunMesh);
             scene.add(light);
             scene.add(earthGroup);
-
-            var renderModel = new THREE.RenderPass( scene, camera );
-            var effectBloom = new THREE.BloomPass( 1.25 );
-            var effectFilm = new THREE.FilmPass( 0.35, 0.95, 2048, false );
-
-            composer = new THREE.EffectComposer( renderer );
-
-            composer.addPass( renderModel );
-            composer.addPass( effectBloom );
-            composer.addPass( effectFilm );
         }
 
         // This function is called regularly to update the canvas webgl.
@@ -292,15 +246,15 @@
 
         function render() {
 
-            let time = Date.now();
-            uniforms[ "time" ].value += 0.2 * Math.sin(time);
+            let now = Date.now();
+            let deltaTime = now - curTime;
+            curTime = now;
+            uniforms[ "time" ].value += 0.005 * deltaTime;
 
-            sunMesh.rotation.y += 0.0125 * time;
-            sunMesh.rotation.x += 0.05 * time;
+            sunMesh.rotation.y += 0.001 * deltaTime;
+            sunMesh.rotation.x += 0.001 * deltaTime;
 
-            renderer.clear();
-            composer.render( 0.01 );
-            // renderer.render(scene, camera);
+            renderer.render(scene, camera);
         }
 
         // This function is called regularly to update objects.
