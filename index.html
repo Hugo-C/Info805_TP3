@@ -69,6 +69,14 @@
     <script type="text/javascript">
         // Checks that your browser supports WebGL.
 
+        let movementSpeed = 80;
+        let totalObjects = 1000;
+        let objectSize = 10;
+        let sizeRandomness = 4000;
+
+        let dirs = [];
+        let parts = [];
+
         if (!Detector.webgl) Detector.addGetWebGLMessage();
 
         let renderer = null;
@@ -84,12 +92,14 @@
         let earthGroup = null;
         let moonGroup = null;
         let controls = null;
+        let rotateCamera = true;
+        let planets = [];
+        let numBackground = 1;
 
         // This function is called whenever the document is loaded
         function init() {
             // Get display canvas
             const canvas = document.getElementById("webglcanvas");
-            console.log(canvas);
 
             // Create the Three.js renderer and attach it to our canvas
             renderer = new THREE.WebGLRenderer({
@@ -115,17 +125,23 @@
             // On peut aussi paramétrer la qualité du calcul
             light.shadow.mapSize.width = 1024;
             light.shadow.mapSize.height = 1024;
-            light.shadow.camera.near = 0.5;    // default
+            light.shadow.camera.near = 0.5; // default
             light.shadow.camera.far = 50;
             light.shadow.camera.fov = 120;
 
             // Create a texture-mapped sphere and add it to the scene
             // First, create the texture map
             let mapUrl = "images/earth_atmos_2048.jpg";
-            let earthMap = new THREE.TextureLoader().load(mapUrl);
-            let moonMap = new THREE.TextureLoader().load("images/moon_1024.jpg");
+            let earthMap = new THREE.TextureLoader(manager).load(mapUrl);
+            let moonMap = new THREE.TextureLoader(manager).load("images/moon_1024.jpg");
             let normalMapUrl = "images/earth_normal_2048.jpg";
-            let normalMap = new THREE.TextureLoader().load(normalMapUrl);
+            let normalMap = new THREE.TextureLoader(manager).load(normalMapUrl);
+            let planetMap1 = new THREE.TextureLoader(manager).load("images/planet1.jpg");
+            planetMap1.minFilter = THREE.LinearFilter;
+            let planetMap2 = new THREE.TextureLoader(manager).load("images/planet2.png");
+            planetMap2.minFilter = THREE.LinearFilter;
+            let planetMap3 = new THREE.TextureLoader(manager).load("images/planet3.jpg");
+            planetMap3.minFilter = THREE.LinearFilter;
 
             // Now, create a Basic material; pass in the map
             let earthMaterial = new THREE.MeshStandardMaterial({
@@ -134,6 +150,15 @@
             });
             let moonMaterial = new THREE.MeshStandardMaterial({
                 map: moonMap
+            });
+            let planetMaterial = new THREE.MeshStandardMaterial({
+                map: planetMap1
+            });
+            let planetMateria2 = new THREE.MeshStandardMaterial({
+                map: planetMap2
+            });
+            let planetMateria3 = new THREE.MeshStandardMaterial({
+                map: planetMap3
             });
 
             uniforms = {
@@ -154,17 +179,29 @@
             let earthGeometry = new THREE.SphereGeometry(1, 32, 32);
             let sunGeometry = new THREE.SphereBufferGeometry(2, 32, 32);
             let moonGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+            let planetGeometry1 = new THREE.SphereGeometry(Math.random() + 2, 32, 32);
+            let planetGeometry2 = new THREE.SphereGeometry(Math.random() + 2, 32, 32);
+            let planetGeometry3 = new THREE.SphereGeometry(Math.random() + 2, 32, 32);
 
             // And put the geometry and material together into a mesh
             earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
             sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
             moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+            let planetMesh1 = new THREE.Mesh(planetGeometry1, planetMaterial);
+            let planetMesh2 = new THREE.Mesh(planetGeometry2, planetMateria2);
+            let planetMesh3 = new THREE.Mesh(planetGeometry3, planetMateria3);
 
             // specify shadow
             earthMesh.castShadow = true;
             earthMesh.receiveShadow = true;
             moonMesh.castShadow = true;
             moonMesh.receiveShadow = true;
+            planetMesh1.castShadow = true;
+            planetMesh1.receiveShadow = true;
+            planetMesh2.castShadow = true;
+            planetMesh2.receiveShadow = true;
+            planetMesh3.castShadow = true;
+            planetMesh3.receiveShadow = true;
 
             // Move the mesh back from the camera and tilt it toward the viewer
             earthMesh.position.z = -8;
@@ -176,6 +213,24 @@
             moonMesh.position.x = 0;
             moonMesh.rotation.x = Math.PI / 5;
             moonMesh.rotation.y = Math.PI / 5;
+
+            planetMesh1.position.z = -2;
+            planetMesh1.position.x = 0;
+            planetMesh1.rotation.x = Math.PI / 5;
+            planetMesh1.rotation.y = Math.PI / 5;
+            planets.push(planetMesh1);
+
+            planetMesh2.position.z = -48;
+            planetMesh2.position.x = 0;
+            planetMesh2.rotation.x = Math.PI / 5;
+            planetMesh2.rotation.y = Math.PI / 5;
+            planets.push(planetMesh2);
+
+            planetMesh3.position.z = -8;
+            planetMesh3.position.x = 10;
+            planetMesh3.rotation.x = Math.PI / 5;
+            planetMesh3.rotation.y = Math.PI / 5;
+            planets.push(planetMesh3);
 
             sunMesh.position.z = -25;
             sunMesh.position.x = 0;
@@ -209,13 +264,13 @@
             controls.dampingFactor = 0.25;
             controls.screenSpacePanning = false;
             controls.minDistance = earthMesh.geometry.parameters.radius + 1;
-            controls.autoRotate = true;
+            controls.autoRotate = rotateCamera;
             controls.maxDistance = 50;
             controls.distance = (controls.minDistance + controls.maxDistance) / 2;
-            controls.target = earthMesh.matrixWorld.getPosition();
+            controls.target.setFromMatrixPosition(earthMesh.matrixWorld);
 
             // Add background
-            let path = "images/Space/";
+            let path = "images/Space" + numBackground + "/";
             let format = '.jpg';
             let urls = [
                 path + 'posx' + format, path + 'negx' + format,
@@ -230,6 +285,55 @@
             scene.add(sunMesh);
             scene.add(light);
             scene.add(earthGroup);
+            for (let p of planets) {
+                scene.add(p);
+            }
+        }
+
+        function ExplodeAnimation(x, y) {
+            let geometry = new THREE.Geometry();
+
+            for (i = 0; i < totalObjects; i++) {
+                let vertex = new THREE.Vector3();
+                vertex.x = x;
+                vertex.y = y;
+                vertex.z = 0;
+
+                geometry.vertices.push(vertex);
+                dirs.push({
+                    x: (Math.random() * movementSpeed) - (movementSpeed / 2),
+                    y: (Math.random() * movementSpeed) - (movementSpeed / 2),
+                    z: (Math.random() * movementSpeed) - (movementSpeed / 2)
+                });
+            }
+            let material = new THREE.PointsMaterial({
+                size: objectSize,
+                color: 0x850606
+            });
+            let particles = new THREE.Points(geometry, material);
+
+            this.object = particles;
+            this.status = true;
+
+            this.xDir = (Math.random() * movementSpeed) - (movementSpeed / 2);
+            this.yDir = (Math.random() * movementSpeed) - (movementSpeed / 2);
+            this.zDir = (Math.random() * movementSpeed) - (movementSpeed / 2);
+
+            scene.add(this.object);
+
+            this.update = function() {
+                if (this.status == true) {
+                    let pCount = totalObjects;
+                    while (pCount--) {
+                        let particle = this.object.geometry.vertices[pCount]
+                        particle.y += dirs[pCount].y;
+                        particle.x += dirs[pCount].x;
+                        particle.z += dirs[pCount].z;
+                    }
+                    this.object.geometry.verticesNeedUpdate = true;
+                }
+            }
+
         }
 
         // This function is called regularly to update the canvas webgl.
@@ -244,6 +348,7 @@
             animate();
         }
 
+        // This function is called regularly to take care of the rendering.
         function render() {
 
             let now = Date.now();
@@ -272,6 +377,10 @@
             moonGroup.rotation.y += angle / 28; // la lune tourne en 28 jours autour de la terre
             moonMesh.rotation.y += angle / 28; // et en 28 jours aussi sur elle-même pour faire face à la terre
 
+            if (planets.length > 0) planets[0].rotation.y += angle;
+            if (planets.length > 1) planets[1].rotation.y += angle / 5;
+            if (planets.length > 2) planets[2].rotation.y += angle / 10;
+
 
             let earthPosition = new THREE.Vector3();
             earthPosition.setFromMatrixPosition(earthMesh.matrixWorld);
@@ -280,7 +389,25 @@
         }
 
         function toggleCameraAutoRotation() {
-            controls.autoRotate = ! controls.autoRotate;
+            rotateCamera = !rotateCamera;
+            controls.autoRotate = rotateCamera;
+        }
+
+        function changeBackground() {
+            numBackground++;
+            if (numBackground > 3) numBackground = 1;
+            planets = [];
+            init();
+        }
+
+        function explosion() {
+
+            if (planets.length != 0) {
+                parts.push(new ExplodeAnimation(Math.random() * planets[planets.length - 1].position.x, Math.random() * planets[planets.length - 1].position.y));
+                scene.remove(planets[planets.length - 1]);
+                planets.pop();
+            }
+            if (planets.length == 0) document.getElementById('buttonExplosion').style.visibility = 'hidden';
         }
     </script>
 </head>
@@ -289,9 +416,34 @@
     <div id="info"> a first three.js example</div>
     <canvas id="webglcanvas" style="border: none;background-color:#000000" width="800" height="600"></canvas>
     <button onclick="toggleCameraAutoRotation()">toggle camera auto rotation</button>
+    <button id="buttonExplosion" onclick="explosion()">Explosion</button>
+    <button onclick="changeBackground()">Change background</button>
     <!-- We run the WebGL code at the end to be sure that the document is loaded.
   -->
     <script>
+        const info = document.getElementById("info");
+
+        // progress bar
+        const manager = new THREE.LoadingManager();
+
+        let progressBackground = document.createElement("div");
+        progressBackground.id ="progressBackground";
+        let progressBar = document.createElement("div");
+        progressBar.id = "progressBar";
+        progressBackground.appendChild(progressBar);
+        info.appendChild(progressBackground);
+
+        manager.onStart = function (url, itemsLoaded, itemsTotal) {
+            progressBar.style.width = '0px';
+            progressBackground.style.visibility = 'visible ';
+        };
+        manager.onProgress = function (item, loaded, total) {
+            progressBar.style.width = (loaded / total * 100) + '%';
+        };
+        manager.onLoad = function () {
+            progressBackground.style.visibility = 'hidden';  // remove the loader
+        };
+
         init();
         run();
     </script>
