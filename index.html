@@ -12,62 +12,42 @@
     <script src="js/Detector.js"></script>
     <script src="js/OrbitControls.js"></script>
 
-    <script src="js/shaders/ConvolutionShader.js"></script>
-    <script src="js/shaders/CopyShader.js"></script>
-    <script src="js/shaders/FilmShader.js"></script>
-
-    <script src="js/postprocessing/EffectComposer.js"></script>
-    <script src="js/postprocessing/ShaderPass.js"></script>
-    <script src="js/postprocessing/MaskPass.js"></script>
-    <script src="js/postprocessing/RenderPass.js"></script>
-    <script src="js/postprocessing/BloomPass.js"></script>
-    <script src="js/postprocessing/FilmPass.js"></script>
-
-    <script src="js/WebGL.js"></script>
-
+    <!-- from : https://threejs.org/examples/#webgl_shader2 -->
     <script id="fragment_shader" type="x-shader/x-fragment">
+        uniform float time;
+		uniform sampler2D texture;
+		varying vec2 vUv;
 
-			uniform float time;
+		void main( void ) {
+		    vec2 position = - 1.0 + 2.0 * vUv;
+			float a = atan( position.y, position.x );
+			float r = sqrt( dot( position, position ) );
 
-			uniform sampler2D texture;
+			vec2 uv;
+			uv.x = cos( a ) / r;
+			uv.y = sin( a ) / r;
+			uv /= 10.0;
+			uv += time * 0.05;
 
-			varying vec2 vUv;
+			vec3 color = texture2D( texture, uv ).rgb;
 
-			void main( void ) {
+			gl_FragColor = vec4( color * r * 1.5, 1.0 );
+		}
+	</script>
 
-				vec2 position = - 1.0 + 2.0 * vUv;
+	<script id="vertexShader" type="x-shader/x-vertex">
+        varying vec2 vUv;
 
-				float a = atan( position.y, position.x );
-				float r = sqrt( dot( position, position ) );
-
-				vec2 uv;
-				uv.x = cos( a ) / r;
-				uv.y = sin( a ) / r;
-				uv /= 10.0;
-				uv += time * 0.05;
-
-				vec3 color = texture2D( texture, uv ).rgb;
-
-				gl_FragColor = vec4( color * r * 1.5, 1.0 );
-
-			}
-		</script>
-
-		<script id="vertexShader" type="x-shader/x-vertex">
-
-			varying vec2 vUv;
-
-			void main()
-			{
-				vUv = uv;
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-				gl_Position = projectionMatrix * mvPosition;
-			}
-
-		</script>
+		void main() {
+			vUv = uv;
+			vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			gl_Position = projectionMatrix * mvPosition;
+		}
+	</script>
 
     <script type="text/javascript">
         // Checks that your browser supports WebGL.
+        if (!Detector.webgl) Detector.addGetWebGLMessage();
 
         let movementSpeed = 80;
         let totalObjects = 1000;
@@ -76,8 +56,6 @@
 
         let dirs = [];
         let parts = [];
-
-        if (!Detector.webgl) Detector.addGetWebGLMessage();
 
         let renderer = null;
         let scene = null;
@@ -88,13 +66,16 @@
         let vertexDisplacement = null;
         let sunMesh = null;
         let uniforms = null; // used for sun shader
-        let curTime = Date.now();
+        let curTimeRender = Date.now();
+        let curTimeAnimate = Date.now();
         let earthGroup = null;
         let moonGroup = null;
         let controls = null;
         let rotateCamera = true;
         let planets = [];
         let numBackground = 1;
+
+        let loadingManager = null;
 
         // This function is called whenever the document is loaded
         function init() {
@@ -132,15 +113,15 @@
             // Create a texture-mapped sphere and add it to the scene
             // First, create the texture map
             let mapUrl = "images/earth_atmos_2048.jpg";
-            let earthMap = new THREE.TextureLoader(manager).load(mapUrl);
-            let moonMap = new THREE.TextureLoader(manager).load("images/moon_1024.jpg");
+            let earthMap = new THREE.TextureLoader(loadingManager).load(mapUrl);
+            let moonMap = new THREE.TextureLoader(loadingManager).load("images/moon_1024.jpg");
             let normalMapUrl = "images/earth_normal_2048.jpg";
-            let normalMap = new THREE.TextureLoader(manager).load(normalMapUrl);
-            let planetMap1 = new THREE.TextureLoader(manager).load("images/planet1.jpg");
+            let normalMap = new THREE.TextureLoader(loadingManager).load(normalMapUrl);
+            let planetMap1 = new THREE.TextureLoader(loadingManager).load("images/planet1.jpg");
             planetMap1.minFilter = THREE.LinearFilter;
-            let planetMap2 = new THREE.TextureLoader(manager).load("images/planet2.png");
+            let planetMap2 = new THREE.TextureLoader(loadingManager).load("images/planet2.png");
             planetMap2.minFilter = THREE.LinearFilter;
-            let planetMap3 = new THREE.TextureLoader(manager).load("images/planet3.jpg");
+            let planetMap3 = new THREE.TextureLoader(loadingManager).load("images/planet3.jpg");
             planetMap3.minFilter = THREE.LinearFilter;
 
             // Now, create a Basic material; pass in the map
@@ -161,14 +142,12 @@
                 map: planetMap3
             });
 
+            // we create the sun mat
             uniforms = {
                 "time": { value: 1.0 },
                 "texture": { value: new THREE.TextureLoader().load( 'textures/8k_sun.jpg' ) }
             };
-
             uniforms[ "texture" ].value.wrapS = uniforms[ "texture" ].value.wrapT = THREE.RepeatWrapping;
-
-
             let sunMaterial = new THREE.ShaderMaterial( {
                 uniforms: uniforms,
                 vertexShader: document.getElementById( 'vertexShader' ).textContent,
@@ -191,7 +170,7 @@
             let planetMesh2 = new THREE.Mesh(planetGeometry2, planetMateria2);
             let planetMesh3 = new THREE.Mesh(planetGeometry3, planetMateria3);
 
-            // specify shadow
+            // specify shadows
             earthMesh.castShadow = true;
             earthMesh.receiveShadow = true;
             moonMesh.castShadow = true;
@@ -293,7 +272,7 @@
         function ExplodeAnimation(x, y) {
             let geometry = new THREE.Geometry();
 
-            for (i = 0; i < totalObjects; i++) {
+            for (let i = 0; i < totalObjects; i++) {
                 let vertex = new THREE.Vector3();
                 vertex.x = x;
                 vertex.y = y;
@@ -322,10 +301,10 @@
             scene.add(this.object);
 
             this.update = function() {
-                if (this.status == true) {
+                if (this.status) {
                     let pCount = totalObjects;
                     while (pCount--) {
-                        let particle = this.object.geometry.vertices[pCount]
+                        let particle = this.object.geometry.vertices[pCount];
                         particle.y += dirs[pCount].y;
                         particle.x += dirs[pCount].x;
                         particle.z += dirs[pCount].z;
@@ -352,8 +331,8 @@
         function render() {
 
             let now = Date.now();
-            let deltaTime = now - curTime;
-            curTime = now;
+            let deltaTime = now - curTimeRender;
+            curTimeRender = now;
             uniforms[ "time" ].value += 0.005 * deltaTime;
 
             sunMesh.rotation.y += 0.001 * deltaTime;
@@ -371,8 +350,8 @@
         function animate() {
             // Computes how time has changed since last display
             let now = Date.now();
-            let deltaTime = now - curTime;
-            curTime = now;
+            let deltaTime = now - curTimeAnimate;
+            curTimeAnimate = now;
             let fracTime = deltaTime / 1000; // in seconds
 
             let angle = fracTime * Math.PI * 2;
@@ -414,41 +393,45 @@
             }
             if (planets.length == 0) document.getElementById('buttonExplosion').style.visibility = 'hidden';
         }
+
+        function initProgressBar() {
+            loadingManager = new THREE.LoadingManager();
+
+            let progressBackground = document.getElementById("progressBackground");
+            let progressBar = document.getElementById("progressBar");
+
+            loadingManager.onStart = function (url, itemsLoaded, itemsTotal) {
+                progressBar.style.width = '0px';
+                progressBackground.style.visibility = 'visible ';
+            };
+            loadingManager.onProgress = function (item, loaded, total) {
+                progressBar.style.width = (loaded / total * 100) + '%';
+            };
+            loadingManager.onLoad = function () {
+                progressBackground.style.visibility = 'hidden';  // remove the loader
+            };
+        }
     </script>
 </head>
 
 <body>
-    <div id="info"> a first three.js example</div>
+    <div id="info">
+        Info 805, introduction to three.js
+        <div id="progressBackground">
+            <div id="progressBar"></div>
+        </div>
+    </div>
     <canvas id="webglcanvas" style="border: none;background-color:#000000" width="800" height="600"></canvas>
-    <button onclick="toggleCameraAutoRotation()">toggle camera auto rotation</button>
-    <button id="buttonExplosion" onclick="explosion()">Explosion</button>
-    <button onclick="changeBackground()">Change background</button>
+    <br>
+    <div id="myButtons">
+        <button onclick="toggleCameraAutoRotation()">toggle camera auto rotation</button>
+        <button id="buttonExplosion" onclick="explosion()">Explosion</button>
+        <button onclick="changeBackground()">Change background</button>
+    </div>
     <!-- We run the WebGL code at the end to be sure that the document is loaded.
   -->
     <script>
-        const info = document.getElementById("info");
-
-        // progress bar
-        const manager = new THREE.LoadingManager();
-
-        let progressBackground = document.createElement("div");
-        progressBackground.id ="progressBackground";
-        let progressBar = document.createElement("div");
-        progressBar.id = "progressBar";
-        progressBackground.appendChild(progressBar);
-        info.appendChild(progressBackground);
-
-        manager.onStart = function (url, itemsLoaded, itemsTotal) {
-            progressBar.style.width = '0px';
-            progressBackground.style.visibility = 'visible ';
-        };
-        manager.onProgress = function (item, loaded, total) {
-            progressBar.style.width = (loaded / total * 100) + '%';
-        };
-        manager.onLoad = function () {
-            progressBackground.style.visibility = 'hidden';  // remove the loader
-        };
-
+        initProgressBar();
         init();
         run();
     </script>

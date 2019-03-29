@@ -40250,8 +40250,8 @@ function AnimationAction( mixer, clip, localRoot ) {
 	// inside: PropertyMixer (managed by the mixer)
 	this._propertyBindings = new Array( nTracks );
 
-	this._cacheIndex = null;			// for the memory manager
-	this._byClipCacheIndex = null;		// for the memory manager
+	this._cacheIndex = null;			// for the memory loadingManager
+	this._byClipCacheIndex = null;		// for the memory loadingManager
 
 	this._timeScaleInterpolant = null;
 	this._weightInterpolant = null;
@@ -41034,7 +41034,7 @@ AnimationMixer.prototype = Object.assign( Object.create( EventDispatcher.prototy
 
 	},
 
-	// Memory manager
+	// Memory loadingManager
 
 	_initMemoryManager: function () {
 
@@ -41428,7 +41428,7 @@ AnimationMixer.prototype = Object.assign( Object.create( EventDispatcher.prototy
 
 		this._bindAction( newAction, prototypeAction );
 
-		// and make the action known to the memory manager
+		// and make the action known to the memory loadingManager
 		this._addInactiveAction( newAction, clipUuid, rootUuid );
 
 		return newAction;

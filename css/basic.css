@@ -25,6 +25,14 @@ body {
     display: block;
 }
 
+#myButtons {
+    display: flex;
+    justify-content: space-evenly;
+    margin-left: 30%;
+    margin-right: 30%;
+
+}
+
 #progressBackground {
     width: 200px;
     height: 20px;
